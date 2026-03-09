@@ -1,0 +1,16 @@
+{
+  "name": "kv-cache-teaching-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Research-level teaching assets for a KV Cache lecture.",
+  "scripts": {
+    "build": "node slides/build_deck.js",
+    "render": "python3 slides/render_slides.py slides/output/kv-cache-research-seminar.pptx --output_dir slides/rendered",
+    "montage": "python3 slides/create_montage.py --input_dir slides/rendered --output_file slides/rendered/montage.png",
+    "overflow": "python3 slides/slides_test.py slides/output/kv-cache-research-seminar.pptx",
+    "font-check": "python3 slides/detect_font.py slides/output/kv-cache-research-seminar.pptx --json"
+  },
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}
