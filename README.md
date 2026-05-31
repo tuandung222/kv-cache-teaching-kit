@@ -78,12 +78,10 @@ This repo also includes an interactive, highly-detailed web lecture about KV Cac
 ### How to read it
 
 1. You can open `index.html` directly in your browser.
-2. Or you can deploy it to **GitHub Pages**:
-   - Go to your repository settings on GitHub.
-   - Click on "Pages" in the left sidebar.
-   - Under "Build and deployment" -> "Source", select "Deploy from a branch".
-   - Select the `main` branch and `/ (root)` folder.
-   - Click "Save". Your interactive lecture will be available at your GitHub pages URL shortly!
+2. It is also **automatically deployed to GitHub Pages** via GitHub Actions.
+   - Make sure GitHub Actions are enabled in your repository.
+   - Under your repository settings -> "Pages" -> "Build and deployment", ensure the Source is set to **"GitHub Actions"**.
+   - Any push to the `main` branch will automatically trigger the deployment.
 
 ## Suggested use
 
