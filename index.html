@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản Chất Của KV Cache: Bài Giảng Dành Cho Chuyên Gia</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .prose h2 {
+      margin-top: 2.5rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .prose h3 {
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .prose p {
+      margin-bottom: 1.25rem;
+      line-height: 1.75;
+      font-size: 1.125rem;
+    }
+    .prose ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .prose li {
+      margin-bottom: 0.5rem;
+      line-height: 1.6;
+    }
+    .highlight-box {
+      background-color: #f0fdf4;
+      border-left: 4px solid #22c55e;
+      padding: 1rem;
+      margin-bottom: 1.25rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+    .warning-box {
+      background-color: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 1rem;
+      margin-bottom: 1.25rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="max-w-4xl mx-auto px-4 py-12">
+    <header class="text-center mb-16">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">Bản Chất Của KV Cache</h1>
+      <p class="text-xl text-slate-600 font-medium">Bài giảng chuyên sâu dành cho AI Researchers & Engineers</p>
+    </header>
+
+    <div class="prose max-w-none">
+      <section>
+        <h2>Lời Nói Đầu</h2>
+        <p>
+          Chào các bạn, tôi là Jules. Hôm nay, chúng ta sẽ không nói về những khái niệm bề nổi của LLM. Chúng ta sẽ cùng nhau "mổ xẻ" cơ chế nằm ở trái tim của mọi hệ thống suy luận tự hồi quy (autoregressive inference) hiện đại: <strong>KV Cache</strong>.
+        </p>
+        <p>
+          Mục tiêu của bài giảng này không phải là để bạn nhớ được một vài công thức, mà là để bạn <strong>thực sự cảm nhận</strong> được KV Cache giải quyết bài toán gì, khi nào nó tỏa sáng, khi nào nó trở thành rào cản (bottleneck), và tại sao việc tối ưu hệ thống phục vụ (serving) lại đang chuyển dịch từ tối ưu tính toán (compute) sang quản lý bộ nhớ (memory management).
+        </p>
+      </section>
+
+      <section>
+        <h2>1. Vấn Đề Gốc Rễ: Tại Sao Lại Cần KV Cache?</h2>
+        <div class="highlight-box">
+          <strong>Thông điệp cốt lõi:</strong> Trong kiến trúc Transformer giải quyết bài toán sinh văn bản (autoregressive decoding), mô hình chỉ sinh ra <em>một token mới ở mỗi bước</em>. Nếu không có bộ đệm (cache), ta sẽ phải tính toán lại tất cả các Key và Value cho toàn bộ chuỗi token trước đó ở mọi lớp.
+        </div>
+        <p>Hãy tưởng tượng bạn đang đọc một cuốn tiểu thuyết và để hiểu từ tiếp theo, bạn phải đọc lại từ đầu cuốn sách ở mỗi từ bạn đọc. Đó chính là sự lãng phí khủng khiếp của cơ chế Attention khi không có bộ đệm.</p>
+
+        <h3>Cụ thể về mặt toán học:</h3>
+        <p>Giả sử ta đang ở lớp thứ <code>l</code>. Các token đã được xử lý trước đó đã sinh ra các ma trận:</p>
+        <ul>
+          <li><code>K_l ∈ ℝ^{T × H_kv × d}</code></li>
+          <li><code>V_l ∈ ℝ^{T × H_kv × d}</code></li>
+        </ul>
+        <p>Tại bước sinh (decode) thứ <code>t = T + 1</code>, mô hình chỉ cần tính:</p>
+        <ol class="list-decimal pl-6 mb-5">
+          <li>Vector Query mới (<strong>Q</strong>) cho token hiện tại.</li>
+          <li>Vector Key (<strong>K</strong>) và Value (<strong>V</strong>) mới cho token hiện tại.</li>
+        </ol>
+        <p>Sau đó, nó đơn giản chỉ là <strong>nối (append)</strong> Key và Value mới này vào KV Cache đã lưu từ các bước trước, và tính Attention giữa Query mới và toàn bộ KV Cache. <em>Q không bao giờ được cache</em>, vì mỗi token có một Query riêng biệt để tìm kiếm thông tin của nó, trong khi K và V của các token trước đó là tĩnh (không đổi) khi prefix đã cố định.</p>
+
+        <div class="warning-box">
+          <strong>Câu hỏi gợi mở:</strong> Tại sao Key và Value lại có thể tái sử dụng, trong khi Query thì không? <br>
+          <em>(Hãy suy nghĩ: Query đại diện cho "điều tôi đang tìm kiếm lúc này", còn Key/Value đại diện cho "những gì đã tồn tại ở các vị trí trước").</em>
+        </div>
+
+        <div class="my-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h3 class="text-xl font-bold mb-4 text-center">Trực quan hoá: Tốn kém ở mỗi bước sinh Token (Decode)</h3>
+
+          <div class="flex items-center justify-center space-x-4 mb-6">
+            <button @click="prevStep" :disabled="currentStep === 1" class="px-4 py-2 bg-slate-200 text-slate-700 font-medium rounded hover:bg-slate-300 disabled:opacity-50 transition-colors">Trở lại</button>
+            <div class="w-32 text-center font-mono font-bold text-lg text-slate-800">Bước {{ currentStep }} / {{ maxSteps }}</div>
+            <button @click="nextStep" :disabled="currentStep === maxSteps" class="px-4 py-2 bg-indigo-600 text-white font-medium rounded hover:bg-indigo-700 disabled:opacity-50 transition-colors">Tiếp theo</button>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <!-- Không có Cache -->
+            <div class="border rounded-lg p-5 bg-slate-50 shadow-inner">
+              <h4 class="font-bold text-center mb-2 text-red-600">Không dùng KV Cache</h4>
+              <p class="text-sm text-center mb-6 text-slate-600 h-10">Máy phải tính toán lại (Recompute) Key, Value cho <strong>toàn bộ</strong> chuỗi từ đầu.</p>
+              <div class="flex flex-wrap gap-2 justify-center min-h-[120px] content-start">
+                <div v-for="i in currentStep" :key="'no-cache-'+i"
+                     class="w-12 h-12 flex items-center justify-center rounded-lg border-2 border-red-400 bg-red-100 text-red-800 font-bold shadow-sm transition-all duration-300 animate-pulse">
+                  T_{{ i }}
+                </div>
+              </div>
+              <div class="mt-6 text-center text-sm font-medium text-slate-600">
+                <span class="inline-block w-3 h-3 bg-red-400 rounded mr-1"></span> Khối lượng tính toán (Compute)
+              </div>
+            </div>
+
+            <!-- Có Cache -->
+            <div class="border rounded-lg p-5 bg-slate-50 shadow-inner">
+              <h4 class="font-bold text-center mb-2 text-emerald-600">Dùng KV Cache</h4>
+              <p class="text-sm text-center mb-6 text-slate-600 h-10">Chỉ tính toán cho token <strong>hiện tại</strong>. Đọc phần còn lại từ bộ nhớ Cache.</p>
+              <div class="flex flex-wrap gap-2 justify-center min-h-[120px] content-start">
+                <div v-for="i in currentStep" :key="'cache-'+i"
+                     :class="['w-12 h-12 flex items-center justify-center rounded-lg border-2 font-bold shadow-sm transition-all duration-300', i === currentStep ? 'border-emerald-500 bg-emerald-100 text-emerald-800 animate-pulse' : 'border-blue-300 bg-blue-50 text-blue-600']">
+                  T_{{ i }}
+                </div>
+              </div>
+              <div class="mt-6 text-center text-sm flex justify-center space-x-6 font-medium text-slate-600">
+                <div class="flex items-center"><span class="inline-block w-3 h-3 bg-blue-300 rounded mr-2"></span> Đọc từ Cache</div>
+                <div class="flex items-center"><span class="inline-block w-3 h-3 bg-emerald-400 rounded mr-2"></span> Tính toán mới</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. Sự Khác Biệt Một Trời Một Vực: Prefill vs Decode</h2>
+        <p>Một sai lầm rất phổ biến của các nhà nghiên cứu là áp dụng trực giác của việc "Prefill" sang quá trình "Decode". Hai quá trình này mang đặc điểm hệ thống và điểm nghẽn hoàn toàn khác nhau.</p>
+
+        <div class="grid md:grid-cols-2 gap-6 my-6">
+          <div class="bg-indigo-50 p-5 rounded-lg border border-indigo-100">
+            <h3 class="text-indigo-800 mt-0">Giai đoạn Prefill (Xử lý Prompt)</h3>
+            <ul class="text-indigo-900 text-sm">
+              <li><strong>Đầu vào:</strong> Toàn bộ prompt có độ dài <code>T</code>.</li>
+              <li><strong>Hành vi:</strong> Tính toán song song với causal mask. Lấp đầy KV Cache.</li>
+              <li><strong>Điểm nghẽn (Bottleneck):</strong> <em>Khả năng tính toán (Compute-bound)</em>. Các phép nhân ma trận (GEMM) cực lớn.</li>
+              <li><strong>Chỉ số quan trọng:</strong> TTFT (Time To First Token).</li>
+            </ul>
+          </div>
+          <div class="bg-emerald-50 p-5 rounded-lg border border-emerald-100">
+            <h3 class="text-emerald-800 mt-0">Giai đoạn Decode (Sinh Token)</h3>
+            <ul class="text-emerald-900 text-sm">
+              <li><strong>Đầu vào:</strong> Chỉ 1 token duy nhất ở mỗi bước.</li>
+              <li><strong>Hành vi:</strong> Đọc lại toàn bộ KV Cache, thực hiện phép nhân ma trận-vector (GEMV).</li>
+              <li><strong>Điểm nghẽn (Bottleneck):</strong> <em>Băng thông bộ nhớ (Memory Bandwidth-bound)</em>. Phải liên tục kéo dữ liệu từ VRAM vào Compute Cores.</li>
+              <li><strong>Chỉ số quan trọng:</strong> ITL (Inter-Token Latency).</li>
+            </ul>
+          </div>
+        </div>
+        <p>Bạn thấy đấy, dù Decode tính toán (FLOPs) ít hơn rất nhiều so với Prefill, tốc độ sinh (throughput) vẫn có thể cực kỳ chậm chạp. Tại sao? Vì việc "vận chuyển" lượng dữ liệu KV Cache khổng lồ qua lại từ bộ nhớ (VRAM) tốn thời gian hơn rất nhiều so với việc thực sự nhân cộng chúng.</p>
+      </section>
+
+      <section>
+        <h2>3. Con Quái Vật Ăn RAM: Cấu Trúc Và Kích Thước KV Cache</h2>
+        <p>Bạn đã bao giờ tự hỏi, để sinh văn bản dài với LLM, chúng ta cần bao nhiêu bộ nhớ? Đây không phải là lý thuyết suông, đây là rào cản sinh tử khi đưa mô hình ra production.</p>
+
+        <div class="bg-slate-900 text-white p-4 rounded-lg font-mono text-sm mb-6 overflow-x-auto">
+          KV_Cache_Memory = 2 × (Batch) × (Layers) × (Sequence Length) × (KV_Heads) × (Head_Dim) × (Bytes_per_Element)
+        </div>
+        <p class="text-sm text-slate-500 italic mb-6">(*Số 2 đại diện cho 2 ma trận Key và Value).</p>
+
+        <div class="my-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h3 class="text-xl font-bold mb-4">KV Cache Memory Calculator</h3>
+          <p class="text-sm text-slate-600 mb-6">Hãy thử điều chỉnh các thông số dưới đây để xem sự khác biệt giữa MHA, GQA và MQA về mặt sử dụng bộ nhớ.</p>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Kiểu Attention (Architecture)</label>
+                <div class="flex rounded-md shadow-sm">
+                  <button @click="attentionType = 'MHA'" :class="['flex-1 py-2 text-sm font-medium border rounded-l-md', attentionType === 'MHA' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50']">MHA</button>
+                  <button @click="attentionType = 'GQA'" :class="['flex-1 py-2 text-sm font-medium border-t border-b', attentionType === 'GQA' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50']">GQA</button>
+                  <button @click="attentionType = 'MQA'" :class="['flex-1 py-2 text-sm font-medium border rounded-r-md', attentionType === 'MQA' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50']">MQA</button>
+                </div>
+                <p class="text-xs text-slate-500 mt-1" v-if="attentionType === 'MHA'">Multi-Head Attention: Số KV Heads = Số Query Heads</p>
+                <p class="text-xs text-slate-500 mt-1" v-if="attentionType === 'GQA'">Grouped-Query Attention: Nhiều Query Heads chia sẻ 1 KV Head</p>
+                <p class="text-xs text-slate-500 mt-1" v-if="attentionType === 'MQA'">Multi-Query Attention: Tất cả Query Heads dùng chung 1 KV Head</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Batch Size: <span class="font-bold text-indigo-600">{{ batchSize }}</span></label>
+                <input type="range" v-model="batchSize" min="1" max="256" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Sequence Length (Tokens): <span class="font-bold text-indigo-600">{{ seqLength }}</span></label>
+                <input type="range" v-model="seqLength" min="512" max="131072" step="512" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Layers: <span class="font-bold">{{ layers }}</span></label>
+                  <input type="range" v-model="layers" min="12" max="96" step="4" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Head Dimension: <span class="font-bold">{{ headDim }}</span></label>
+                  <select v-model="headDim" class="w-full border-slate-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="64">64</option>
+                    <option value="128">128</option>
+                    <option value="256">256</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-slate-900 text-white rounded-xl p-6 flex flex-col justify-center items-center relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 via-indigo-500 to-purple-600"></div>
+
+              <div class="text-slate-400 text-sm mb-2 font-medium">KV Cache Footprint</div>
+              <div class="text-5xl font-black mb-4 tracking-tighter" :class="memoryColor">{{ formatBytes(memoryBytes) }}</div>
+
+              <div class="w-full bg-slate-800 rounded-lg p-4 mt-4 font-mono text-xs text-slate-300">
+                <div class="flex justify-between border-b border-slate-700 pb-2 mb-2">
+                  <span>Kiểu:</span> <span class="text-indigo-400 font-bold">{{ attentionType }}</span>
+                </div>
+                <div class="flex justify-between mb-1">
+                  <span>Query Heads:</span> <span>{{ queryHeads }}</span>
+                </div>
+                <div class="flex justify-between mb-1">
+                  <span>KV Heads:</span> <span class="text-emerald-400 font-bold">{{ kvHeads }}</span>
+                </div>
+                <div class="flex justify-between pt-2 mt-2 border-t border-slate-700 text-slate-500 text-[10px]">
+                  Công thức: 2 * B * L * T * H_kv * d * 2 bytes (FP16)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p>Đây chính là lý do vì sao GQA (Grouped-Query Attention) và MQA (Multi-Query Attention) ra đời. Chúng không chỉ là những "chiêu trò kiến trúc" (architectural details) để tăng tốc, mà chúng là <strong>quyết định sống còn của hệ thống (serving decision)</strong>. Việc giảm số lượng `KV_Heads` (chữ <code>H_kv</code> trong công thức trên) trực tiếp giúp bạn phục vụ được context dài hơn trên cùng một lượng VRAM.</p>
+      </section>
+
+      <section>
+        <h2>4. Góc Nhìn Hệ Thống (Systems View) & Tối Ưu Hóa</h2>
+        <p>Khi ta phục vụ hàng ngàn người dùng cùng lúc (Continuous Batching), mọi thứ trở nên phức tạp.</p>
+        <ul>
+          <li><strong>Sự Phân Mảnh (Fragmentation):</strong> Nếu cấp phát bộ nhớ liền kề (contiguous) như mảng truyền thống, khi một câu văn dài ra, ta sẽ hết không gian liền kề và phải di chuyển dữ liệu (rất tốn kém). Giải pháp: <strong>Paged KV Cache</strong> (chia bộ đệm thành các "trang" rời rạc giống như OS quản lý RAM).</li>
+          <li><strong>Prefix Caching:</strong> Rất nhiều user chia sẻ cùng một System Prompt. Tại sao phải tính toán và lưu KV Cache lặp lại cho đoạn prompt đó? Hệ thống hiện đại có thể tái sử dụng phần KV Cache chung này.</li>
+          <li><strong>Sliding Windows & Quantization:</strong> Giới hạn số token được lưu trữ (chỉ nhìn về quá khứ gần) hoặc ép kiểu KV Cache xuống FP8, INT4 để tiết kiệm băng thông và bộ nhớ.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Tổng Kết Bài Học</h2>
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <p class="text-xl font-medium text-blue-900 mb-0">
+            "KV Cache không chỉ là một thủ thuật tối ưu tốc độ. Nó là cơ chế biến quá trình suy luận tự hồi quy từ một <strong>bài toán tính toán lặp lại (recomputation problem)</strong> trở thành một <strong>bài toán quản lý bộ nhớ (memory-management problem)</strong>."
+          </p>
+        </div>
+      </section>
+
+      <footer class="mt-16 pt-8 border-t border-slate-200 text-center text-slate-500 text-sm">
+        <p>Bài giảng được biên soạn dành cho AI Research Seminar.</p>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed } = Vue;
+
+    const app = createApp({
+      setup() {
+        // --- Animation 1: Decoding Simulation ---
+        const currentStep = ref(1);
+        const maxSteps = ref(10);
+
+        const nextStep = () => {
+          if (currentStep.value < maxSteps.value) currentStep.value++;
+        };
+        const prevStep = () => {
+          if (currentStep.value > 1) currentStep.value--;
+        };
+
+        // --- Animation 2: KV Cache Calculator ---
+        const attentionType = ref('MHA');
+        const batchSize = ref(1);
+        const seqLength = ref(32768);
+        const layers = ref(32);
+        const queryHeads = ref(32); // Assume 32 query heads base
+        const headDim = ref(128);
+
+        const kvHeads = computed(() => {
+          if (attentionType.value === 'MHA') return queryHeads.value;
+          if (attentionType.value === 'GQA') return 8; // Group by 4
+          if (attentionType.value === 'MQA') return 1;
+          return queryHeads.value;
+        });
+
+        // 2 * batch * layers * seq_len * kv_heads * head_dim * bytes_per_element (2 for FP16)
+        const memoryBytes = computed(() => {
+          return 2 * batchSize.value * layers.value * seqLength.value * kvHeads.value * Number(headDim.value) * 2;
+        });
+
+        const formatBytes = (bytes) => {
+          if (bytes === 0) return '0 Bytes';
+          const k = 1024;
+          const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        };
+
+        const memoryColor = computed(() => {
+          const gb = memoryBytes.value / (1024 * 1024 * 1024);
+          if (gb < 4) return 'text-emerald-400';
+          if (gb < 16) return 'text-yellow-400';
+          if (gb < 40) return 'text-orange-500';
+          return 'text-red-500';
+        });
+
+        return {
+          currentStep,
+          maxSteps,
+          nextStep,
+          prevStep,
+          attentionType,
+          batchSize,
+          seqLength,
+          layers,
+          headDim,
+          queryHeads,
+          kvHeads,
+          memoryBytes,
+          formatBytes,
+          memoryColor
+        };
+      }
+    });
+
+    app.mount('#app');
+  </script>
+</body>
+</html>

@@ -71,8 +71,23 @@ The deck and notes cover:
 - Paged KV Cache, prefix caching, sliding windows, quantization
 - Measurement strategy and open research questions
 
+## Interactive Web Lecture
+
+This repo also includes an interactive, highly-detailed web lecture about KV Cache tailored for Research Scientists and Engineers.
+
+### How to read it
+
+1. You can open `index.html` directly in your browser.
+2. Or you can deploy it to **GitHub Pages**:
+   - Go to your repository settings on GitHub.
+   - Click on "Pages" in the left sidebar.
+   - Under "Build and deployment" -> "Source", select "Deploy from a branch".
+   - Select the `main` branch and `/ (root)` folder.
+   - Click "Save". Your interactive lecture will be available at your GitHub pages URL shortly!
+
 ## Suggested use
 
 - Use the slide deck for a research seminar or internal deep-dive.
 - Use the lecture notes as speaker notes or a written handout.
 - Use the Socratic assistant to rehearse explanations, challenge assumptions, or diagnose learner misconceptions.
+- Share the **interactive web lecture** (`index.html`) with students for an engaging deep dive into KV Cache metrics, bottlenecks, and optimizations.
