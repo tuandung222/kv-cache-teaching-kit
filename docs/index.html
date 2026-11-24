@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KV Cache Teaching Kit</title>
+    <style>
+      :root {
+        --bg: #f5efe6;
+        --surface: #fffdf9;
+        --ink: #15202b;
+        --muted: #5d6872;
+        --accent: #c86434;
+        --teal: #2f7b86;
+        --line: #dccdb9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "PT Sans", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top right, rgba(47, 123, 134, 0.14), transparent 28%),
+          linear-gradient(180deg, #f7f1e8 0%, #f3ede4 100%);
+      }
+
+      main {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 40px 24px 56px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .panel {
+        background: rgba(255, 253, 249, 0.92);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 14px 34px rgba(95, 76, 44, 0.08);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0 0 12px;
+      }
+
+      h1 {
+        font-size: 42px;
+        line-height: 1.05;
+      }
+
+      h2 {
+        font-size: 22px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        margin-bottom: 12px;
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-size: 12px;
+      }
+
+      .actions,
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .actions {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-top: 20px;
+      }
+
+      .grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        margin-top: 24px;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px;
+      }
+
+      a.button,
+      a.link {
+        text-decoration: none;
+      }
+
+      a.button {
+        display: inline-block;
+        background: var(--teal);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 999px;
+        font-weight: 700;
+      }
+
+      a.button.secondary {
+        background: var(--accent);
+      }
+
+      a.link {
+        color: var(--teal);
+        font-weight: 700;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Menlo, monospace;
+        background: #f0ebe3;
+        border-radius: 6px;
+        padding: 2px 6px;
+      }
+
+      ul {
+        padding-left: 18px;
+        margin: 0;
+      }
+
+      .subgrid {
+        display: grid;
+        gap: 14px;
+      }
+
+      @media (max-width: 860px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 34px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="panel">
+          <div class="eyebrow">Local Preview</div>
+          <h1>KV Cache Teaching Kit</h1>
+          <p>
+            Local dashboard for the slide deck, lecture notes, Socratic teaching
+            assistant prompt, and the multi-architecture implementation roadmap.
+          </p>
+          <div class="actions">
+            <a class="button" href="../slides/output/kv-cache-research-seminar.pptx">Open Slide Deck</a>
+            <a class="button secondary" href="../notes/lecture_notes.md">Open Lecture Notes</a>
+            <a class="button" href="../assistant/socratic_assistant_prompt.md">Open Assistant Prompt</a>
+            <a class="button secondary" href="../subprojects/README.md">Open Subproject Roadmap</a>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="eyebrow">Quick Start</div>
+          <h2>How to use locally</h2>
+          <p>From the repo root:</p>
+          <p><code>python3 tools/preview_local.py</code></p>
+          <p>
+            The script serves the repository and opens this page in your browser.
+            If the browser does not open automatically, use
+            <code>http://127.0.0.1:8000/docs/index.html</code>.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="eyebrow">Main Assets</div>
+        <div class="grid">
+          <article class="card">
+            <h3>Slide Deck</h3>
+            <p>Research-level seminar deck on KV Cache.</p>
+            <a class="link" href="../slides/output/kv-cache-research-seminar.pptx">View file</a>
+          </article>
+
+          <article class="card">
+            <h3>Lecture Notes</h3>
+            <p>60-minute speaking notes and conceptual structure.</p>
+            <a class="link" href="../notes/lecture_notes.md">View file</a>
+          </article>
+
+          <article class="card">
+            <h3>Socratic Assistant</h3>
+            <p>System prompt for a research-level teaching assistant.</p>
+            <a class="link" href="../assistant/socratic_assistant_prompt.md">View file</a>
+          </article>
+
+          <article class="card">
+            <h3>Repo Overview</h3>
+            <p>Top-level instructions, build commands, and structure.</p>
+            <a class="link" href="../README.md">View file</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top: 24px;">
+        <div class="eyebrow">Implementation Roadmap</div>
+        <h2>Subprojects for building KV Cache from scratch</h2>
+        <div class="subgrid">
+          <article class="card">
+            <h3>00 Common Runtime</h3>
+            <p>Base cache interface, prefill, decode step, and equivalence tests.</p>
+            <a class="link" href="../subprojects/00-common-runtime/README.md">Open subproject</a>
+          </article>
+
+          <article class="card">
+            <h3>01 GPT Absolute Positions</h3>
+            <p>Decoder-only baseline with learned positional embeddings.</p>
+            <a class="link" href="../subprojects/01-gpt-decoder-only-absolute-pos/README.md">Open subproject</a>
+          </article>
+
+          <article class="card">
+            <h3>02 LLaMA GQA + RoPE</h3>
+            <p>KV heads differ from attention heads; cache stores only KV heads.</p>
+            <a class="link" href="../subprojects/02-llama-gqa-rope/README.md">Open subproject</a>
+          </article>
+
+          <article class="card">
+            <h3>03 BART and mBART</h3>
+            <p>Separate self-attention cache and cross-attention cache.</p>
+            <a class="link" href="../subprojects/03-bart-mbart-encoder-decoder/README.md">Open subproject</a>
+          </article>
+
+          <article class="card">
+            <h3>04 T5 Relative Bias</h3>
+            <p>Correctness depends on query and key lengths, not only stored KV tensors.</p>
+            <a class="link" href="../subprojects/04-t5-relative-position-bias/README.md">Open subproject</a>
+          </article>
+
+          <article class="card">
+            <h3>05 Mistral Sliding Window</h3>
+            <p>Logical context grows while physical cache remains bounded.</p>
+            <a class="link" href="../subprojects/05-mistral-sliding-window/README.md">Open subproject</a>
+          </article>
+
+          <article class="card">
+            <h3>06 Advanced Systems</h3>
+            <p>Static, offloaded, quantized, and paged cache tracks.</p>
+            <a class="link" href="../subprojects/06-advanced-systems/README.md">Open subproject</a>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -9,6 +9,7 @@ Teaching repo for a 60-minute research-level lecture on KV Cache in autoregressi
 - `notes/lecture_notes.md`: lecture notes for a 60-minute seminar
 - `assistant/socratic_assistant_prompt.md`: system prompt for a Socratic teaching assistant
 - `assistant/quickstart.md`: ways to use the assistant during prep or live teaching
+- `subprojects/`: a from-scratch implementation roadmap across multiple model families
 
 ## Audience
 
@@ -21,7 +22,10 @@ From the repo root:
 ```bash
 npm install
 npm run build
+npm run preview
 ```
+
+`npm run preview` starts a local web server and opens a dashboard at `http://127.0.0.1:8000/docs/index.html`.
 
 Optional validation:
 
@@ -48,6 +52,7 @@ kv-cache-teaching-kit/
 ├── .gitignore
 ├── assistant/
 ├── notes/
+├── subprojects/
 ├── slides/
 │   ├── build_deck.js
 │   ├── requirements-render.txt
@@ -76,3 +81,4 @@ The deck and notes cover:
 - Use the slide deck for a research seminar or internal deep-dive.
 - Use the lecture notes as speaker notes or a written handout.
 - Use the Socratic assistant to rehearse explanations, challenge assumptions, or diagnose learner misconceptions.
+- Use [`subprojects/README.md`](/Users/admin/TuanDung/repos/kv-cache-teaching-kit/subprojects/README.md) as the execution plan for building KV Cache implementations from scratch.
